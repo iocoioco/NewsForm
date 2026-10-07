@@ -1,4 +1,4 @@
-﻿using HtmlAgilityPack;
+using HtmlAgilityPack;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -19,6 +19,11 @@ namespace NewsForm
         public string Title { get; set; }
         public string Url { get; set; }
         public string ClusterId { get; set; }
+    }
+    internal sealed class PartialNewsException : IOException
+    {
+        internal List<StockNewsItem> Articles { get; }
+        internal PartialNewsException(string message, List<StockNewsItem> articles) : base(message) { Articles = articles; }
     }
     public static class NaverNewsCrawler
     {
@@ -194,7 +199,7 @@ namespace NewsForm
             }
             return result;
         }
-        private static async Task<List<StockNewsItem>> CrawlStockAsync(string stock, string code, DateTime startTime, DateTime endTime)
+        private static async Task<List<StockNewsItem>> CrawlStockAsync(string stock, string code, DateTime startTime, DateTime endTime, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken), int pageDelayMs = 500, Action<int> pageProgress = null, Action<List<StockNewsItem>> articlesProgress = null)
         {
             var result = new List<StockNewsItem>();
             var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -203,7 +208,9 @@ namespace NewsForm
             {
                 string url = "https://stock.naver.com/api/domestic/detail/news?itemCode=" + Uri.EscapeDataString(code)
                     + "&page=" + page + "&pageSize=20";
-                var articles = ParsePage(await _client.GetStringAsync(url));
+                cancellationToken.ThrowIfCancellationRequested();
+                pageProgress?.Invoke(page);
+                var articles = ParsePage(await ReadPageAsync(url, cancellationToken));
                 if (articles.Count == 0) return result;
                 string signature = string.Join("|", articles.Select(a => a.officeId + ":" + a.articleId));
                 if (!pages.Add(signature)) throw new InvalidDataException("뉴스 페이지가 반복됩니다.");
@@ -220,17 +227,35 @@ namespace NewsForm
                     if (!seen.Add(id + ":" + article.ClusterId)) continue;
 
                     if (time < startTime || time > endTime) continue;
-                    result.Add(new StockNewsItem { Stock = stock, ClusterId = article.ClusterId, Time = time.ToString("yyyy/MM/dd HH:mm"),
+                    result.Add(new StockNewsItem { Stock = stock, ClusterId = article.ClusterId, Time = time.ToString("yyyy/MM/dd HH:mm", System.Globalization.CultureInfo.InvariantCulture),
                         Title = WebUtility.HtmlDecode(article.title ?? "").Replace("\t", " ").Replace("\r", " ").Replace("\n", " "),
                         Url = "https://n.news.naver.com/mnews/article/" + article.officeId + "/" + article.articleId });
                 }
+                articlesProgress?.Invoke(result.ToList());
                 if (allOlder) return result;
 
-                await Task.Delay(500);
+                await Task.Delay(pageDelayMs, cancellationToken);
             }
-            throw new InvalidDataException("100페이지 수집 한도입니다. 조회 기간을 줄이세요.");
+            throw new PartialNewsException("네이버 100페이지 한도 · 요청 시작일에 도달하지 못함 · 확보한 기사 유지", result);
         }
 
+        private static async Task<string> ReadPageAsync(string url, System.Threading.CancellationToken token)
+        {
+            using (var response = await _client.GetAsync(url, token))
+            {
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadAsStringAsync();
+            }
+        }
+        internal static async Task<List<StockNewsItem>> CrawlSectorStockAsync(string stock, DateTime start, DateTime end, System.Threading.CancellationToken token, Action<int> pageProgress = null, Action<List<StockNewsItem>> articlesProgress = null)
+        {
+            token.ThrowIfCancellationRequested();
+            string code = GetStockCode(stock);
+            if (string.IsNullOrWhiteSpace(code)) throw new InvalidOperationException("종목코드 조회 실패");
+            ServicePointManager.FindServicePoint(new Uri("https://stock.naver.com")).ConnectionLimit = 3;
+            return await CrawlStockAsync(stock, code, start, end, token, 250, pageProgress, articlesProgress);
+        }
+        internal static void SaveSectorNews(string file, List<StockNewsItem> articles) => Save(file, articles);
         private static List<string> LoadStockNames()
         {
             var result =

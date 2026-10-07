@@ -18,4 +18,16 @@ C:\BJS\NewsForm\NewsForm\obj\Debug\NewsForm.pdb
 C:\BJS\prep\news_important_20260929\build\NewsForm.exe.config
 C:\BJS\prep\news_important_20260929\build\NewsForm.exe
 C:\BJS\prep\news_important_20260929\build\NewsForm.pdb
+C:\BJS\NewsForm\NewsForm\bin\Sector\NewsForm.exe.config
+C:\BJS\NewsForm\NewsForm\bin\Sector\NewsForm.exe
+C:\BJS\NewsForm\NewsForm\bin\Sector\NewsForm.pdb
+C:\BJS\NewsForm\NewsForm\bin\Sector\HtmlAgilityPack.dll
+C:\BJS\NewsForm\NewsForm\bin\Sector\HtmlAgilityPack.pdb
+C:\BJS\NewsForm\NewsForm\bin\Sector\HtmlAgilityPack.xml
+C:\BJS\NewsForm\NewsForm\bin\Pending\NewsForm.exe.config
+C:\BJS\NewsForm\NewsForm\bin\Pending\NewsForm.exe
+C:\BJS\NewsForm\NewsForm\bin\Pending\NewsForm.pdb
+C:\BJS\NewsForm\NewsForm\bin\Pending\HtmlAgilityPack.dll
+C:\BJS\NewsForm\NewsForm\bin\Pending\HtmlAgilityPack.pdb
+C:\BJS\NewsForm\NewsForm\bin\Pending\HtmlAgilityPack.xml
 C:\BJS\NewsForm\NewsForm\obj\Debug\NewsForm.exe.config
